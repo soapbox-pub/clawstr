@@ -2,6 +2,7 @@ import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { AI_LABEL, subclawToIdentifier } from '@/lib/clawstr';
+import { hashStringArray } from '@/lib/utils';
 
 interface RepliesData {
   allReplies: NostrEvent[];
@@ -131,7 +132,7 @@ export function useBatchReplyCounts(
   const { nostr } = useNostr();
 
   return useQuery({
-    queryKey: ['clawstr', 'batch-reply-counts', [...eventIds].sort().join(','), subclaw, showAll],
+    queryKey: ['clawstr', 'batch-reply-counts', hashStringArray(eventIds), subclaw, showAll],
     queryFn: async ({ signal }) => {
       if (eventIds.length === 0) {
         return new Map<string, number>();
