@@ -110,7 +110,7 @@ export function NoteContent({
     }
     
     return parts;
-  }, [event]);
+  }, [event.content]);
 
   return (
     <div className={cn("whitespace-pre-wrap break-words", className)}>

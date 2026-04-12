@@ -25,8 +25,10 @@ interface UseLargestZapsOptions {
 
 /**
  * Fetch largest zaps for Clawstr posts, sorted by amount.
- * 
- * Fetches posts and zaps in a single query function to avoid stale closure issues.
+ *
+ * Fetches posts and zap receipts in a single queryFn. The posts query must
+ * complete first (we need IDs to filter zaps), but everything happens within
+ * one React Query cycle — no multi-hook waterfall.
  */
 export function useLargestZaps(options: UseLargestZapsOptions = {}) {
   const { nostr } = useNostr();
@@ -36,6 +38,7 @@ export function useLargestZaps(options: UseLargestZapsOptions = {}) {
     queryKey: ['clawstr', 'largest-zaps', limit, timeRange, showAll],
     queryFn: async ({ signal }) => {
       const since = getTimeRangeSince(timeRange);
+      const combinedSignal = AbortSignal.any([signal, AbortSignal.timeout(8000)]);
 
       // Step 1: Fetch posts within time range
       const postFilter: NostrFilter = {
@@ -53,26 +56,22 @@ export function useLargestZaps(options: UseLargestZapsOptions = {}) {
         postFilter['#L'] = [AI_LABEL.namespace];
       }
 
-      const posts = await nostr.query([postFilter], {
-        signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
-      });
+      const posts = await nostr.query([postFilter], { signal: combinedSignal });
 
-      // Filter to valid Clawstr top-level posts
+      // Filter to valid top-level posts
       const validPosts = posts.filter((event) => {
         if (!isTopLevelPost(event)) return false;
         const identifier = event.tags.find(([name]) => name === 'I')?.[1];
         return identifier && isClawstrIdentifier(identifier);
       });
 
-      if (validPosts.length === 0) {
-        return [];
-      }
+      if (validPosts.length === 0) return [];
 
       const postIds = validPosts.map((p) => p.id);
 
       // Step 2: Fetch zaps for these posts
-      const zapFilter: NostrFilter = { 
-        kinds: [9735], 
+      const zapFilter: NostrFilter = {
+        kinds: [9735],
         '#e': postIds,
         limit: 100,
       };
@@ -81,39 +80,31 @@ export function useLargestZaps(options: UseLargestZapsOptions = {}) {
         zapFilter.since = since;
       }
 
-      const zapReceipts = await nostr.query(
-        [zapFilter],
-        { signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]) }
-      );
+      const zapReceipts = await nostr.query([zapFilter], { signal: combinedSignal });
 
-      // Process and collect all valid zaps
+      // Step 3: Process and sort
+      const postIdSet = new Set(postIds);
       const allZaps: LargestZap[] = [];
 
       for (const zap of zapReceipts) {
-        const eTag = zap.tags.find(([name]) => name === 'e');
-        const targetEventId = eTag?.[1] ?? null;
+        const targetEventId = zap.tags.find(([name]) => name === 'e')?.[1] ?? null;
 
-        if (!targetEventId || !postIds.includes(targetEventId)) continue;
+        if (!targetEventId || !postIdSet.has(targetEventId)) continue;
 
-        const senderPubkey = getZapSender(zap);
-        const recipientPubkey = getZapRecipient(zap);
         const amount = extractSatsFromZap(zap);
-
         if (amount === 0) continue;
 
         allZaps.push({
           zapReceipt: zap,
           targetEventId,
-          senderPubkey,
-          recipientPubkey,
+          senderPubkey: getZapSender(zap),
+          recipientPubkey: getZapRecipient(zap),
           amount,
           timestamp: zap.created_at,
         });
       }
 
-      // Sort by amount descending (largest first)
       allZaps.sort((a, b) => b.amount - a.amount);
-
       return allZaps.slice(0, limit);
     },
     staleTime: 60 * 1000,

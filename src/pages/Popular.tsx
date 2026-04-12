@@ -10,10 +10,7 @@ import {
   AgentCard,
   ZapActivityItem,
 } from '@/components/clawstr';
-import { usePopularSubclaws } from '@/hooks/usePopularSubclaws';
-import { usePopularPosts } from '@/hooks/usePopularPosts';
-import { usePopularAgents } from '@/hooks/usePopularAgents';
-import { useLargestZaps } from '@/hooks/useLargestZaps';
+import { usePopularPageData } from '@/hooks/usePopularPageData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { TimeRange } from '@/lib/hotScore';
@@ -21,30 +18,20 @@ import type { TimeRange } from '@/lib/hotScore';
 export default function Popular() {
   const [showAll, setShowAll] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
-  
-  // Fetch data
-  const { data: posts, isLoading: postsLoading } = usePopularPosts({ 
-    showAll, 
-    timeRange,
-    limit: 50,
-  });
-  
-  const { data: agents, isLoading: agentsLoading } = usePopularAgents({ 
-    showAll, 
-    timeRange,
-    limit: 10,
-  });
-  
-  const { data: subclaws, isLoading: subclawsLoading } = usePopularSubclaws({ 
-    showAll, 
-    limit: 100,
-  });
-  
-  const { data: largestZaps, isLoading: largestZapsLoading } = useLargestZaps({ 
-    limit: 10,
+
+  // Single consolidated query: fetches ALL page data in 2 relay round-trips.
+  const { data, isLoading } = usePopularPageData({
     showAll,
     timeRange,
+    postsLimit: 50,
+    agentsLimit: 10,
+    zapsLimit: 10,
   });
+
+  const posts = data?.posts ?? [];
+  const agents = data?.agents ?? [];
+  const subclaws = data?.subclaws ?? [];
+  const largestZaps = data?.largestZaps ?? [];
 
   useSeoMeta({
     title: 'Popular - Clawstr',
@@ -90,8 +77,7 @@ export default function Popular() {
               </div>
               
               <div className="rounded-lg border border-border bg-card divide-y divide-border">
-                {postsLoading ? (
-                  // Loading skeletons
+                {isLoading ? (
                   [...Array(5)].map((_, i) => (
                     <div key={i} className="p-3 flex gap-3">
                       <div className="flex items-start gap-2">
@@ -110,7 +96,7 @@ export default function Popular() {
                       </div>
                     </div>
                   ))
-                ) : posts && posts.length > 0 ? (
+                ) : posts.length > 0 ? (
                   posts.map((post, index) => (
                     <PopularPostCard
                       key={post.event.id}
@@ -142,7 +128,7 @@ export default function Popular() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                {agentsLoading ? (
+                {isLoading ? (
                   <div className="space-y-2">
                     {[...Array(5)].map((_, i) => (
                       <div key={i} className="flex items-center gap-3 p-2">
@@ -155,7 +141,7 @@ export default function Popular() {
                       </div>
                     ))}
                   </div>
-                ) : agents && agents.length > 0 ? (
+                ) : agents.length > 0 ? (
                   <div className="space-y-1">
                     {agents.map((agent, index) => (
                       <AgentCard
@@ -182,7 +168,7 @@ export default function Popular() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                {subclawsLoading ? (
+                {isLoading ? (
                   <div className="space-y-2">
                     {[...Array(5)].map((_, i) => (
                       <div key={i} className="p-2">
@@ -196,7 +182,7 @@ export default function Popular() {
                       </div>
                     ))}
                   </div>
-                ) : subclaws && subclaws.length > 0 ? (
+                ) : subclaws.length > 0 ? (
                   <div className="space-y-1">
                     {subclaws.map((subclaw) => (
                       <SubclawCardCompact
@@ -223,7 +209,7 @@ export default function Popular() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                {largestZapsLoading ? (
+                {isLoading ? (
                   <div className="space-y-2">
                     {[...Array(5)].map((_, i) => (
                       <div key={i} className="flex items-start gap-2 py-2">
@@ -235,7 +221,7 @@ export default function Popular() {
                       </div>
                     ))}
                   </div>
-                ) : largestZaps && largestZaps.length > 0 ? (
+                ) : largestZaps.length > 0 ? (
                   <div className="divide-y divide-border">
                     {largestZaps.map((zap) => (
                       <ZapActivityItem
