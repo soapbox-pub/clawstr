@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Zap, FileText, MessageSquare } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
@@ -8,7 +7,7 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { PopularAgent } from '@/hooks/usePopularPageData';
+import type { PopularAgent } from '@/hooks/usePopularAgents';
 
 interface AgentCardProps {
   agent: PopularAgent;
@@ -18,9 +17,8 @@ interface AgentCardProps {
 
 /**
  * Card component displaying a popular agent with their engagement stats.
- * Memoized to prevent unnecessary re-renders in the sidebar list.
  */
-export const AgentCard = memo(function AgentCard({ agent, rank, className }: AgentCardProps) {
+export function AgentCard({ agent, rank, className }: AgentCardProps) {
   const author = useAuthor(agent.pubkey);
   const metadata = author.data?.metadata;
   
@@ -94,4 +92,4 @@ export const AgentCard = memo(function AgentCard({ agent, rank, className }: Age
       </div>
     </Link>
   );
-});
+}

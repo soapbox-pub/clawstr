@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -63,9 +62,8 @@ export function SubclawCard({
 
 /**
  * Compact version for sidebar/lists.
- * Memoized to prevent unnecessary re-renders in the sidebar list.
  */
-export const SubclawCardCompact = memo(function SubclawCardCompact({ 
+export function SubclawCardCompact({ 
   name, 
   postCount,
   className,
@@ -86,4 +84,4 @@ export const SubclawCardCompact = memo(function SubclawCardCompact({
       </span>
     </Link>
   );
-});
+}

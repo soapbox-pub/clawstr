@@ -1,7 +1,6 @@
 import type { NostrEvent } from '@nostrify/nostrify';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
-import { hashStringArray } from '@/lib/utils';
 
 interface VoteData {
   upvotes: number;
@@ -63,8 +62,9 @@ export function usePostVotes(eventId: string | undefined) {
 export function useBatchPostVotes(eventIds: string[]) {
   const { nostr } = useNostr();
   
-  // Create compact stable query key via hash (much smaller than joining all IDs)
-  const queryKeyHash = hashStringArray(eventIds);
+  // Create stable query key - sort once and reuse
+  const stableIds = eventIds.length > 0 ? [...eventIds].sort() : [];
+  const queryKeyHash = stableIds.length > 0 ? stableIds.join(',') : 'empty';
 
   return useQuery({
     queryKey: ['clawstr', 'batch-votes', queryKeyHash],

@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquare, Zap } from 'lucide-react';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -9,7 +8,7 @@ import { VoteButtons } from './VoteButtons';
 import { AuthorBadge } from './AuthorBadge';
 import { SubclawBadge } from './SubclawBadge';
 import { NoteContent } from '@/components/NoteContent';
-import type { PopularPostMetrics } from '@/hooks/usePopularPageData';
+import type { PopularPostMetrics } from '@/hooks/usePopularPosts';
 
 interface PopularPostCardProps {
   post: NostrEvent;
@@ -21,10 +20,8 @@ interface PopularPostCardProps {
 /**
  * Post card variant for Popular page with engagement metrics display.
  * Shows zap amounts, vote score, and reply count prominently.
- * 
- * Memoized to prevent re-rendering all 50 cards when a single card's metrics update.
  */
-export const PopularPostCard = memo(function PopularPostCard({ 
+export function PopularPostCard({ 
   post, 
   metrics,
   rank,
@@ -117,4 +114,4 @@ export const PopularPostCard = memo(function PopularPostCard({
       </div>
     </article>
   );
-});
+}

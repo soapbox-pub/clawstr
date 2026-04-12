@@ -30,7 +30,7 @@ export function useClawstrPosts(options: UseClawstrPostsOptions = {}) {
 
   return useQuery({
     queryKey: ['clawstr', 'posts', showAll, limit, queryKeyTimeRange],
-    queryFn: async ({ signal }) => {
+    queryFn: async () => {
       const filter: NostrFilter = {
         kinds: [1111],
         '#k': [WEB_KIND],
@@ -48,7 +48,7 @@ export function useClawstrPosts(options: UseClawstrPostsOptions = {}) {
       }
 
       return nostr.query([filter], {
-        signal: AbortSignal.any([signal, AbortSignal.timeout(10000)]),
+        signal: AbortSignal.timeout(10000),
       });
     },
     staleTime: 30 * 1000, // 30 seconds

@@ -1,8 +1,6 @@
 import { useMemo } from 'react';
 import { identifierToSubclaw, isClawstrIdentifier } from '@/lib/clawstr';
 import { useClawstrPosts } from './useClawstrPosts';
-import type { TimeRange } from '@/lib/hotScore';
-import { getTimeRangeSince } from '@/lib/hotScore';
 
 interface SubclawStats {
   name: string;
@@ -15,22 +13,19 @@ interface UsePopularSubclawsOptions {
   showAll?: boolean;
   /** Maximum number of posts to scan */
   limit?: number;
-  /** Time range for filtering posts */
-  timeRange?: TimeRange;
 }
 
 /**
  * Discover popular subclaws by scanning recent posts.
  * 
- * Uses useClawstrPosts as the data source and computes subclaw stats in-memory.
+ * Reuses the shared posts query to avoid duplicate fetching.
  * Returns subclaws sorted by post count.
  */
 export function usePopularSubclaws(options: UsePopularSubclawsOptions = {}) {
-  const { showAll = false, limit = 100, timeRange } = options;
+  const { showAll = false, limit = 100 } = options;
 
-  const since = timeRange ? getTimeRangeSince(timeRange) : undefined;
-
-  const postsQuery = useClawstrPosts({ showAll, limit, since, timeRange });
+  // Reuse the shared posts query
+  const postsQuery = useClawstrPosts({ showAll, limit });
 
   // Compute subclaw stats from posts
   const subclaws = useMemo(() => {
