@@ -61,11 +61,16 @@ jobs:
       - run: npm ci
 
       # The prerenderer drives a real headless Chrome. The coordinator's image
-      # ships the puppeteer download but not its shared libraries, so the
+      # ships puppeteer's Chrome download but not its shared libraries, so the
       # browser dies with "libnspr4.so: cannot open shared object file".
       # GitLab hid this by building inside ghcr.io/puppeteer/puppeteer.
-      # Jobs here run as root and `sudo` is not guaranteed to exist, hence the
-      # guard rather than a bare `sudo apt-get`.
+      #
+      # Package names are tried with and without the `t64` suffix: Ubuntu 24.04
+      # renamed libatk1.0-0, libatk-bridge2.0-0, libcups2 and libasound2 in the
+      # 64-bit time_t transition, and a single apt-get for the whole list fails
+      # entirely if one name is wrong for the release in play. The launch check
+      # at the end is what actually decides the step, so a genuinely missing
+      # library still fails here rather than mid-build.
       - name: Install Chrome's shared libraries
         run: |
           set -eu
@@ -74,15 +79,17 @@ jobs:
           SUDO=""
           if [ "$(id -u)" -ne 0 ]; then SUDO=sudo; fi
           $SUDO apt-get update -qq
-          $SUDO apt-get install -y --no-install-recommends \
-            libnspr4 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
-            libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
-            libgbm1 libpango-1.0-0 libcairo2 fonts-liberation \
-            >/dev/null
-          # Renamed in Ubuntu 24.04; accept either spelling.
-          $SUDO apt-get install -y --no-install-recommends libasound2t64 >/dev/null 2>&1 \
-            || $SUDO apt-get install -y --no-install-recommends libasound2 >/dev/null
+          for pkg in libnspr4 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+                     libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
+                     libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 \
+                     libasound2 fonts-liberation; do
+            $SUDO apt-get install -y --no-install-recommends "$pkg" >/dev/null 2>&1 \
+              || $SUDO apt-get install -y --no-install-recommends "${pkg}t64" >/dev/null 2>&1 \
+              || echo "note: neither $pkg nor ${pkg}t64 is available"
+          done
           npx puppeteer browsers install chrome
+          # Prove the browser actually starts before spending a build on it.
+          node -e "require('puppeteer').launch({args:['--no-sandbox','--disable-setuid-sandbox']}).then(b=>b.close()).then(()=>console.log('chrome launches'))"
 
       # Builds dist/ and writes 404.html (scripts/generate-404.js emits the
       # SPA shell with an empty #root), the path NIP-5A host servers fall
