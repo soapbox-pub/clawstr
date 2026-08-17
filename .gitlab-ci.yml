@@ -1,3 +1,6 @@
+# GitLab is a mirror of the nostr repo. It runs tests here and keeps its own
+# Pages artifact; clawstr.com itself is published as an nsite by
+# .ngit/act/workflows/deploy-nsite.yml, running on the ngit-ci coordinator.
 image:
   name: ghcr.io/puppeteer/puppeteer:24
   docker:
