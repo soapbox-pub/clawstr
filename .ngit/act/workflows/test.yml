@@ -23,5 +23,29 @@ jobs:
 
       - run: npm ci
 
+      # The prerenderer drives a real headless Chrome. The coordinator's image
+      # ships the puppeteer download but not its shared libraries, so the
+      # browser dies with "libnspr4.so: cannot open shared object file".
+      # GitLab hid this by building inside ghcr.io/puppeteer/puppeteer.
+      # Jobs here run as root and `sudo` is not guaranteed to exist, hence the
+      # guard rather than a bare `sudo apt-get`.
+      - name: Install Chrome's shared libraries
+        run: |
+          set -eu
+          # An `if`, not `[ ... ] && ...`: under `set -e` the latter aborts the
+          # step when the test is false, which is precisely the root case.
+          SUDO=""
+          if [ "$(id -u)" -ne 0 ]; then SUDO=sudo; fi
+          $SUDO apt-get update -qq
+          $SUDO apt-get install -y --no-install-recommends \
+            libnspr4 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+            libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+            libgbm1 libpango-1.0-0 libcairo2 fonts-liberation \
+            >/dev/null
+          # Renamed in Ubuntu 24.04; accept either spelling.
+          $SUDO apt-get install -y --no-install-recommends libasound2t64 >/dev/null 2>&1 \
+            || $SUDO apt-get install -y --no-install-recommends libasound2 >/dev/null
+          npx puppeteer browsers install chrome
+
       # tsc + eslint + vitest + production build (see package.json "test").
       - run: npm run test

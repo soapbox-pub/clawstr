@@ -21,6 +21,14 @@ export default defineConfig(() => ({
         "/docs/technical",
         "/docs/about",
       ],
+      // CI runs this build as root inside a container, where Chrome refuses to
+      // start under its setuid sandbox. GitLab hid that by building in the
+      // puppeteer image; ngit-ci uses the coordinator's own, so say it here.
+      rendererOptions: {
+        launchOptions: {
+          args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        },
+      },
     }),
   ],
   test: {
